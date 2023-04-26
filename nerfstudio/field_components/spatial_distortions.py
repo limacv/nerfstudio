@@ -79,9 +79,9 @@ class SceneContraction(SpatialDistortion):
 
             # Only update covariances on positions outside the unit sphere
             mag = positions.mean.norm(dim=-1)
-            mask = mag >= 1
-            cov = positions.cov.clone()
-            cov[mask] = jc_means[mask] @ positions.cov[mask] @ torch.transpose(jc_means[mask], -2, -1)
+            mask = (mag >= 1).type_as(jc_means)[..., None, None]
+            cov_out = jc_means @ positions.cov @ torch.transpose(jc_means, -2, -1)
+            cov = positions.cov * (1 - mask) + cov_out * mask
 
             return Gaussians(mean=means, cov=cov)
 

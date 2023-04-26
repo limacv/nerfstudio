@@ -56,6 +56,40 @@ class Frustums(TensorDataclass):
             pos = pos + self.offsets
         return pos
 
+    def get_spiral_sample(self, n_samples: int, n_spirals: int, random_rotate: bool = False) -> Gaussians:
+        """Sampling points along spiral as illustrated in the paper:
+                Zip-NeRF: Anti-Aliased Grid-Based Neural Radiance Fields
+
+        Returns:
+            if ret_gaussian = False: Multiple positions
+            else: Multiple Gaussian blob
+        """
+        if self.offsets is not None:
+            raise NotImplementedError()
+
+        j = torch.arange(n_samples)[None, None, :].type_as(self.starts)
+        t = self.starts + (self.ends - self.starts) * (j + 0.5) / n_samples
+        r = torch.sqrt(self.pixel_area) / 1.7724538509055159
+
+        ang = 2 * torch.pi * n_spirals / n_samples * j
+        if random_rotate:
+            ang = ang + torch.pi * 2 * torch.rand_like(ang)
+        x = r * t * torch.cos(ang) * 0.5
+        y = r * t * torch.sin(ang) * 0.5
+        roty = torch.tensor([0, 1, 0]).type_as(self.directions)[None, None]  # TODO: this does not always work
+        rotx = torch.cross(roty, self.directions, dim=-1)
+        roty = torch.cross(self.directions, rotx, dim=-1)
+        pts_w = (
+            rotx[..., None, :] * x[..., None]
+            + roty[..., None, :] * y[..., None]
+            + self.directions[..., None, :] * t[..., None]
+        )
+        pts = self.origins[..., None, :] + pts_w  # [..., num_samples, 3]
+
+        var = (r * t * 0.35) ** 2  # [..., num_samples]
+        cov = torch.eye(3).type_as(var)[None, None, None] * var[..., None, None]
+        return Gaussians(pts, cov)
+
     def get_start_positions(self) -> TensorType[..., 3]:
         """Calculates "start" position of frustum.
 
