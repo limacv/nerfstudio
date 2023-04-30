@@ -48,7 +48,9 @@ from nerfstudio.model_components.losses import (
     pred_normal_loss,
 )
 from nerfstudio.model_components.ray_samplers import (
+    PowerTransformSampler,
     ProposalNetworkSampler,
+    UniformLinDispPiecewiseSampler,
     UniformSampler,
 )
 from nerfstudio.model_components.renderers import (
@@ -105,8 +107,8 @@ class ZipNeRFModelConfig(ModelConfig):
         ]
     )
     """Arguments for the proposal density fields."""
-    proposal_initial_sampler: Literal["piecewise", "uniform"] = "piecewise"
-    """Initial sampler for the proposal network. Piecewise is preferred for unbounded scenes."""
+    proposal_initial_sampler: Literal["piecewise", "uniform", "powertrans"] = "powertrans"
+    """Initial sampler for the proposal network. powertrans is the default in zip-nerf implementation."""
     interlevel_loss_mult: float = 1.0
     """Proposal loss multiplier."""
     distortion_loss_mult: float = 0.002
@@ -204,8 +206,12 @@ class ZipNeRFModel(Model):
 
         # Change proposal network initial sampler if uniform
         initial_sampler = None  # None is for piecewise as default (see ProposalNetworkSampler)
-        if self.config.proposal_initial_sampler == "uniform":
+        if self.config.proposal_initial_sampler == "powertrans":  # the default
+            initial_sampler = PowerTransformSampler(single_jitter=self.config.use_single_jitter)
+        elif self.config.proposal_initial_sampler == "uniform":
             initial_sampler = UniformSampler(single_jitter=self.config.use_single_jitter)
+        elif self.config.proposal_initial_sampler == "piecewise":
+            initial_sampler = UniformLinDispPiecewiseSampler(single_jitter=self.config.use_single_jitter)
 
         self.proposal_sampler = ProposalNetworkSampler(
             num_nerf_samples_per_ray=self.config.num_nerf_samples_per_ray,

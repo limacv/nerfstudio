@@ -246,6 +246,34 @@ class UniformLinDispPiecewiseSampler(SpacedSampler):
         )
 
 
+class PowerTransformSampler(SpacedSampler):
+    """Use power transformation as the normalizing function as in zip-nerf
+    However, the formula (4) under lambda = -1.5 seems does not map (0, +inf) to (0, 1),
+        So here we use a slightly modified version: ((2 * x / |lam - 1|) + 1) ^ lam - 1,
+        According to Fig. 7, this should be the correct formula
+    Args:
+        num_samples: Number of samples per ray
+        train_stratified: Use stratified sampling during training. Defaults to True
+        single_jitter: Use a same random jitter for all samples along a ray. Defaults to False
+    """
+
+    def __init__(
+        self,
+        num_samples: Optional[int] = None,
+        train_stratified=True,
+        single_jitter=False,
+    ) -> None:
+        lam = -1.5
+        a = 2.0 / abs(lam - 1)
+        super().__init__(
+            num_samples=num_samples,
+            spacing_fn=lambda x: -((a * x + 1) ** lam) + 1,
+            spacing_fn_inv=lambda x: ((1 - x) ** (1 / lam) - 1) / a,
+            train_stratified=train_stratified,
+            single_jitter=single_jitter,
+        )
+
+
 class PDFSampler(Sampler):
     """Sample based on probability distribution
 
@@ -386,7 +414,6 @@ class VolumetricSampler(Sampler):
         density_fn: Optional[Callable[[TensorType[..., 3]], TensorType[..., 1]]] = None,
         scene_aabb: Optional[TensorType[2, 3]] = None,
     ) -> None:
-
         super().__init__()
         self.scene_aabb = scene_aabb
         self.density_fn = density_fn
@@ -650,7 +677,6 @@ class NeuSSampler(Sampler):
         base_variance = self.base_variance
 
         while total_iters < self.num_upsample_steps:
-
             with torch.no_grad():
                 new_sdf = sdf_fn(new_samples)
 

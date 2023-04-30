@@ -120,6 +120,17 @@ def interlevel_loss(weights_list, ray_samples_list):
     return loss_interlevel
 
 
+def aa_interlevel_loss(weights_list, ray_samples_list):
+    """Calculates the anti-aliased interlevel loss in the zip-NeRF paper.
+
+    https://jonbarron.info/zipnerf/
+    """
+    # blur the step function
+    c = ray_samples_to_sdist(ray_samples_list[-1]).detach()
+    w = weights_list[-1][..., 0].detach()
+    loss_interlevel = 0.0
+
+
 # Verified
 def lossfun_distortion(t, w):
     """
