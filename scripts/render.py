@@ -11,13 +11,15 @@ import sys
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import mediapy as media
 import numpy as np
 import torch
 import tyro
+from rich import box, style
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     Progress,
@@ -25,8 +27,9 @@ from rich.progress import (
     TextColumn,
     TimeRemainingColumn,
 )
+from rich.table import Table
 from torchtyping import TensorType
-from typing_extensions import Literal, assert_never
+from typing_extensions import assert_never
 
 from nerfstudio.cameras.camera_paths import (
     get_interpolated_camera_path,
@@ -80,8 +83,8 @@ def _render_trajectory_video(
         ItersPerSecColumn(suffix="fps"),
         TimeRemainingColumn(elapsed_when_finished=True, compact=True),
     )
+    output_image_dir = output_filename.parent / output_filename.stem
     if output_format == "images":
-        output_image_dir = output_filename.parent / output_filename.stem
         output_image_dir.mkdir(parents=True, exist_ok=True)
     if output_format == "video":
         # make the folder if it doesn't exist
@@ -143,9 +146,19 @@ def _render_trajectory_video(
                         )
                     writer.add_image(render_image)
 
+    table = Table(
+        title=None,
+        show_header=False,
+        box=box.MINIMAL,
+        title_style=style.Style(bold=True),
+    )
     if output_format == "video":
         if camera_type == CameraType.EQUIRECTANGULAR:
             insert_spherical_metadata_into_file(output_filename)
+        table.add_row("Video", str(output_filename))
+    else:
+        table.add_row("Images", str(output_image_dir))
+    CONSOLE.print(Panel(table, title="[bold][green]:tada: Render Complete :tada:[/bold]", expand=False))
 
 
 def insert_spherical_metadata_into_file(

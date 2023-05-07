@@ -31,6 +31,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    Literal,
     Optional,
     Tuple,
     TypeVar,
@@ -41,7 +42,7 @@ from typing import (
 import imageio.v3 as iio
 import numpy as onp
 import numpy.typing as onpt
-from typing_extensions import Literal, LiteralString, ParamSpec, assert_never
+from typing_extensions import LiteralString, ParamSpec, assert_never
 
 from nerfstudio.data.scene_box import SceneBox
 
@@ -439,13 +440,13 @@ class MessageApi(abc.ABC):
         """
         self._queue(messages.DatasetImageMessage(idx=idx, json=json))
 
-    def set_is_training(self, is_training: bool) -> None:
+    def set_training_state(self, training_state: Literal["training", "paused", "completed"]) -> None:
         """Set the training mode.
 
         Args:
-            is_training: The training mode.
+            training_state: The training mode.
         """
-        self._queue(messages.IsTrainingMessage(is_training=is_training))
+        self._queue(messages.TrainingStateMessage(training_state=training_state))
 
     def send_camera_paths(self, camera_paths: Dict[str, Any]) -> None:
         """Send camera paths to the scene.
@@ -484,6 +485,14 @@ class MessageApi(abc.ABC):
             step: The current step.
         """
         self._queue(messages.StatusMessage(eval_res=eval_res, step=step))
+
+    def send_output_options_message(self, options: List[str]):
+        """Send output options message
+
+        Args:
+            options: The list of output options
+        """
+        self._queue(messages.OutputOptionsMessage(options=options))
 
     def _add_gui_impl(
         self,
@@ -531,6 +540,10 @@ class MessageApi(abc.ABC):
             )
         )
         return GuiHandle(handle_state)
+
+    def use_time_conditioning(self) -> None:
+        """Use time conditioning."""
+        self._queue(messages.UseTimeConditioningMessage())
 
     def _handle_gui_updates(
         self: MessageApi,

@@ -18,10 +18,10 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Tuple
+from typing import Any, Literal, Tuple
 
 import viser.infra
-from typing_extensions import Literal, override
+from typing_extensions import override
 
 
 class NerfstudioMessage(viser.infra.Message):
@@ -45,7 +45,7 @@ class GuiAddMessage(NerfstudioMessage):
     """Sent server->client to add a new GUI input."""
 
     name: str
-    folder_labels: Tuple[str]
+    folder_labels: Tuple[str, ...]
     leva_conf: Any
 
     @override
@@ -171,10 +171,10 @@ class DatasetImageMessage(NerfstudioMessage):
 
 
 @dataclasses.dataclass
-class IsTrainingMessage(NerfstudioMessage):
+class TrainingStateMessage(NerfstudioMessage):
     """Wheather the scene is in training mode or not."""
 
-    is_training: bool
+    training_state: Literal["training", "paused", "completed"]
     """True if the model is currently trianing, False otherwise"""
 
 
@@ -228,3 +228,26 @@ class StatusMessage(NerfstudioMessage):
 @dataclasses.dataclass
 class SaveCheckpointMessage(NerfstudioMessage):
     """Save checkpoint message."""
+
+
+@dataclasses.dataclass
+class UseTimeConditioningMessage(NerfstudioMessage):
+    """Use time conditioning message."""
+
+
+@dataclasses.dataclass
+class TimeConditionMessage(NerfstudioMessage):
+    """Time conditioning message."""
+
+    time: float
+    """ Time conditioning value """
+
+
+@dataclasses.dataclass
+class OutputOptionsMessage(NerfstudioMessage):
+    """Output options message which are used in the export panel.
+    TODO: remove when export panel is becomes python defined.
+    """
+
+    options: Any
+    """ List of output option strings"""

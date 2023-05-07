@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Literal, Tuple
 
 import cv2
 import numpy as np
@@ -10,7 +10,6 @@ from nuscenes.nuscenes import NuScenes as NuScenesDatabase
 from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import BoxVisibility, view_points
 from tqdm import tqdm
-from typing_extensions import Literal
 
 
 @dataclass
@@ -79,8 +78,11 @@ class ProcessNuScenesMasks:
                 # Instead use BoxVisibility.NONE and make sure to rasterize box faces correctly
 
                 mask = np.ones((900, 1600), dtype=np.uint8)
-                for box in boxes:
+                # If is backcam, mask the truck of the ego vehicle
+                if camera == "CAM_BACK":
+                    mask[-100:] = 0
 
+                for box in boxes:
                     # Dont mask out static objects (static in all frames)
                     instance_token = nusc.get("sample_annotation", box.token)["instance_token"]
                     if not instances_is_dynamic[instance_token]:
